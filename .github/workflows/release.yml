@@ -126,27 +126,33 @@ jobs:
 
   build-windows:
     name: Build Windows wheel
-    runs-on: ${{ (matrix.target == 'x86_64-pc-windows-msvc' && 'windows-latest') || (matrix.target == 'aarch64-pc-windows-msvc' && 'windows-11-arm') }}
+    runs-on: ${{ (matrix.target == 'x86_64' && 'windows-latest') || (matrix.target == 'aarch64' && 'windows-11-arm') }}
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        target: ['x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc']
+        target: ['x86_64', 'aarch64']
         exclude:
-          - python-version: '3.9'
-            target: 'aarch64-pc-windows-msvc'
-          - python-version: '3.10'
-            target: 'aarch64-pc-windows-msvc'
+          - python-version: ['3.9', '3.10']
+            target: 'aarch64'
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
+      # Conditional Rustup installation for Windows Arm64
+      - name: Install Rustup for Windows Arm64
+        if: matrix.target == 'aarch64'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          target: ${{ matrix.target }}-pc-windows-msvc
+          override: true          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
+          target: ${{ matrix.target }}-pc-windows-msvc
           rust-toolchain: ${{ env.RUST_TOOLCHAIN }}
           args: --release -i ${{ env.pythonLocation }}\python.exe --features unstable-simd
       - uses: astral-sh/setup-uv@v5
@@ -157,7 +163,7 @@ jobs:
       - run: uv run --no-sync pytest
       - uses: actions/upload-artifact@v4
         with:
-          name: ormsgpack-${{ matrix.target }}-${{ matrix.python-version }}
+          name: ormsgpack-windows-${{ matrix.target }}-${{ matrix.python-version }}
           path: target/wheels
           retention-days: 1
           
