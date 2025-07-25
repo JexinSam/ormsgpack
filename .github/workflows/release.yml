@@ -124,23 +124,38 @@ jobs:
           path: target/wheels
           retention-days: 1
 
-  build-windows-x86_64:
-    name: Build Windows x86_64 wheel
-    runs-on: windows-latest
+  build-windows:
+    name: Build Windows wheel
+    runs-on: ${{ (matrix.target == 'x86_64' && 'windows-latest') || (matrix.target == 'aarch64' && 'windows-11-arm') }}
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        target: ['x86_64', 'aarch64']
+        exclude:
+          - python-version: '3.9'
+            target: 'aarch64'
+          - python-version: '3.10'
+            target: 'aarch64'
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
+      # Conditional Rustup installation for Windows Arm64
+      - name: Install Rustup for Windows Arm64
+        if: matrix.target == 'aarch64'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          target: ${{ matrix.target }}-pc-windows-msvc
+          profile: minimal 
+          override: true          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: PyO3/maturin-action@v1
         with:
-          target: x86_64-pc-windows-msvc
+          target: ${{ matrix.target }}-pc-windows-msvc
           rust-toolchain: ${{ env.RUST_TOOLCHAIN }}
           args: --release -i ${{ env.pythonLocation }}\python.exe --features unstable-simd
       - uses: astral-sh/setup-uv@v5
@@ -151,47 +166,7 @@ jobs:
       - run: uv run --no-sync pytest
       - uses: actions/upload-artifact@v4
         with:
-          name: ormsgpack-x86_64-pc-windows-msvc-${{ matrix.python-version }}
-          path: target/wheels
-          retention-days: 1
-
-  build-windows-arm64:
-    name: Build Windows Arm64 wheel
-    runs-on: windows-11-arm
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12', '3.13']
-    env:
-      UV_PYTHON: ${{ matrix.python-version }}
-    steps:
-      - uses: actions/checkout@v4
-      # NEW: Explicitly install Rustup and the toolchain for Windows ARM64
-      # The actions-rust-lang/setup-rust-toolchain action is the most reliable way.
-      - name: Install Rustup and Toolchain for Windows Arm64
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          target: aarch64-pc-windows-msvc # Ensure the target is installed
-          override: true # Ensure this toolchain is set as default for the job
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: PyO3/maturin-action@v1
-        with:
-          target: aarch64-pc-windows-msvc
-          rust-toolchain: ${{ env.RUST_TOOLCHAIN }}
-          args: --release -i ${{ env.pythonLocation }}\python.exe
-          
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - run: uv sync --frozen --no-install-project
-      - run: uv pip install ormsgpack --no-index -f target/wheels
-      - run: uv run --no-sync pytest
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ormsgpack-aarch64-pc-windows-msvc-${{ matrix.python-version }}
+          name: ormsgpack-windows-${{ matrix.target }}-${{ matrix.python-version }}
           path: target/wheels
           retention-days: 1
           
@@ -252,8 +227,7 @@ jobs:
     needs: [
       build-linux-x86_64,
       build-linux-cross,
-      build-windows-x86_64,
-      build-windows-arm64,
+      build-windows,
       build-macos-universal,
       build-sdist,
     ]
