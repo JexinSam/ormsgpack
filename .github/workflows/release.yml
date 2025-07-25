@@ -218,8 +218,7 @@ jobs:
     needs: [
       build-linux-x86_64,
       build-linux-cross,
-      build-windows-x86_64,
-      build-windows-arm64,
+      build-windows,
       build-macos-universal,
       build-sdist,
     ]
