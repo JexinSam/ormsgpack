@@ -129,10 +129,10 @@ jobs:
     runs-on: ${{ (matrix.target == 'x86_64' && 'windows-latest') || (matrix.target == 'aarch64' && 'windows-11-arm') }}
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: [3.9, 3.10, 3.11, 3.12, 3.13]
         target: ['x86_64', 'aarch64']
         exclude:
-          - python-version: ['3.9', '3.10']
+          - python-version: 3.9 3.10
             target: 'aarch64'
     env:
       UV_PYTHON: ${{ matrix.python-version }}
