@@ -147,6 +147,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           target: ${{ matrix.target }}-pc-windows-msvc
+          profile: minimal 
           override: true          
       - name: Set up Python
         uses: actions/setup-python@v5
